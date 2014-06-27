@@ -1,31 +1,62 @@
+class IndentPrinter():
+    def __init__(self, indent=0):
+        self.indent = indent
+
+    def print(self, string):
+        print(('|   ' * self.indent) + string)
+
+
+printer = IndentPrinter()
+
+
 def expression(tokens, rbp=0):
     global token
+    printer.print('###################')
+    printer.print("in expression()")
     t = token
     token = tokens.pop(0)
+    printer.print("t = {}".format(t))
+    printer.print("token = {}".format(token))
     left = t.nud()
+
+    printer.print("rbp = {}, token.lbp = {}".format(rbp, token.lbp))
     while rbp < token.lbp:
         t = token
         token = tokens.pop(0)
         left = t.led(left, tokens)
+        printer.print("rbp = {}, token.lbp = {}".format(rbp, token.lbp))
 
+    printer.print('###################')
+    printer.indent -= 1
     return left
 
 class literal_token(object):
     def __init__(self, value):
-        self.value = int(value)
+        self.value = value
     def nud(self):
+        return self.value
+
+    def __str__(self):
         return self.value
 
 class op_add_token(object):
     lbp = 10
     def led(self, left, tokens):
+        printer.indent += 1
         right = expression(tokens, 10)
         return ['+', left, right]
+
+    def __str__(self):
+        return '+'
 
 class op_mul_token(object):
     lbp = 20
     def led(self, left, tokens):
+        printer.indent += 1
         return ['*', left, expression(tokens, 20)]
+
+    def __str__(self):
+        return '*'
 
 class end_token(object):
     lbp = 0
