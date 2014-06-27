@@ -10,21 +10,21 @@ printer = IndentPrinter()
 
 
 def expression(tokens, rbp=0):
-    global token
+    global curr
     printer.print('###################')
     printer.print("in expression()")
-    t = token
-    token = tokens.pop(0)
+    t = curr
+    curr = tokens.pop(0)
     printer.print("t = {}".format(t))
-    printer.print("token = {}".format(token))
+    printer.print("curr = {}".format(curr))
     left = t.nud()
 
-    printer.print("rbp = {}, token.lbp = {}".format(rbp, token.lbp))
-    while rbp < token.lbp:
-        t = token
-        token = tokens.pop(0)
+    printer.print("rbp = {}, curr.lbp = {}".format(rbp, curr.lbp))
+    while rbp < curr.lbp:
+        t = curr
+        curr = tokens.pop(0)
         left = t.led(left, tokens)
-        printer.print("rbp = {}, token.lbp = {}".format(rbp, token.lbp))
+        printer.print("rbp = {}, curr.lbp = {}".format(rbp, curr.lbp))
 
     printer.print('###################')
     printer.indent -= 1
@@ -77,9 +77,9 @@ def prep_tokens(tokens):
 
 
 def parse(tokens):
-    global token
+    global curr
     tokens = prep_tokens(tokens)
-    token = tokens.pop(0)
+    curr = tokens.pop(0)
     return expression(tokens)
 
 
