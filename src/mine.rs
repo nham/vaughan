@@ -1,35 +1,13 @@
-use std::collections::DList;
+use dlist::DList;
 use std::collections::Deque;
+
+use tree::Tree;
+
+mod tree;
+mod dlist;
 
 type StrTree<'a> = Tree<&'a str>;
 type Doodad<'a> = DList<StrTree<'a>>;
-
-enum Tree<T> {
-    Nil,
-    Node(T, Vec<Tree<T>>)
-}
-
-impl<T> Tree<T> {
-    fn leaf(val: T) -> Tree<T> {
-        Node(val, vec!())
-    }
-
-    fn is_leaf(&self) -> bool {
-        match *self {
-            Node(_, ref vec) => {
-                vec.len() == 0
-            },
-            Nil => false
-        }
-    }
-
-    fn is_empty(&self) -> bool {
-        match *self {
-            Nil => true,
-            _   => false
-        }
-    }
-}
 
 #[deriving(PartialEq, Eq)]
 struct Operator<'a> {
@@ -45,21 +23,20 @@ impl<'a> Operator<'a> {
 
 // # < $ < @
 impl<'a> PartialOrd for Operator<'a> {
-    fn lt(&self, other: & Operator<'a>) -> bool {
-        self.rep == "#"
-        || other.rep == "@"
+    fn partial_cmp(&self, other: & Operator<'a>) -> Option<Ordering> {
+        if self.rep == "#" {
+            Some(Less)
+        } else if other.rep == "@" {
+            Some(Greater)
+        } else {
+            Some(Equal)
+        }
     }
 }
 
 impl<'a> Ord for Operator<'a> {
     fn cmp(&self, other: & Operator<'a>) -> Ordering {
-        if self.rep == other.rep {
-            Equal
-        } else if self < other {
-            Less
-        } else {
-            Greater
-        }
+        self.partial_cmp(other).unwrap()
     }
 }
 
