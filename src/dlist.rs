@@ -130,8 +130,9 @@ impl<T> Deque<T> for DList<T> {
                 },
                 Some(ref node) => {
                     new.prev = self.back;
-                    self.back = &mut *new as *mut Node<T>;
+                    let new_ptr = &mut *new as *mut Node<T>;
                     (*self.back).next = Some(new);
+                    self.back = new_ptr;
                 }
             }
         }
