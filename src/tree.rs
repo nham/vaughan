@@ -1,3 +1,4 @@
+use std::fmt;
 
 pub enum Tree<T> {
     Nil,
@@ -22,6 +23,15 @@ impl<T> Tree<T> {
         match *self {
             Nil => true,
             _   => false
+        }
+    }
+}
+
+impl<T: fmt::Show> fmt::Show for Tree<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Nil => write!(f, "()"),
+            Node(ref val, ref vec) => write!(f, "({} {})", val, vec),
         }
     }
 }

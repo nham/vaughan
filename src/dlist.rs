@@ -1,5 +1,7 @@
 use std::collections::Deque;
 use std::ptr;
+use std::mem;
+use std::fmt;
 
 type Link<T> = Option<Box<Node<T>>>;
 
@@ -73,47 +75,63 @@ impl<T> Deque<T> for DList<T> {
 
     }
 
+
+    /*
+
+    std::collections::DList does this like this:
+
     fn back_mut<'a>(&'a mut self) -> Option<&'a mut T> {
-        unsafe {
-            match self.back.to_option() {
-                None     => None,
-                Some(ref mut node) => Some(&'a mut node.value),
-            }
+        self.list_tail.resolve().map(|tail| &mut tail.value)
+    }
+
+    fn resolve(&mut self) -> Option<&mut T> {
+        if self.p.is_null() {
+            None
+        } else {
+            Some(unsafe { mem::transmute(self.p) })
+        }
+    }
+
+     */
+
+    fn back_mut<'a>(&'a mut self) -> Option<&'a mut T> {
+        if self.back.is_null() {
+            None
+        } else {
+            Some(unsafe { &'a mut (*self.back).value })
         }
     }
 
     fn push_front(&mut self, elt: T) {
         let mut new = box Node::new(elt);
-        match self.front {
-            None => { 
-                self.front = Some(new);
-                self.back = &mut *new as *mut Node<T>;
-            },
-            Some(ref mut b) => {
-                // problem: I'm currently borrowing self.front, but I need
-                // to change it to point to the new node. there's no way I can
-                // do this safely, yeah? I guess I could create the new node,
-                // modify self.front's prev field to point to new node, then
-                b.prev = &mut *new as *mut Node<T>;
-            }
+        if self.front.is_none() {
+            self.back = &mut *new as *mut Node<T>;
+            self.front = Some(new);
+        } else {
+            let old_front = self.front.take();
+            new.next = old_front;
+            self.front = Some(new);
+
+            // I think we need to replace self.front with new, and then set
+            // new.next to the thing we replaced
         }
 
         self.length += 1;
     }
 
     fn push_back(&mut self, elt: T) {
+        let mut new = box Node::new(elt);
+
         unsafe {
             match self.back.to_option() {
-                None     => {
-                    let mut new = Node::new(elt);
-                    self.front = Some(box new);
-                    self.back = &mut *(self.front.unwrap()) as *mut Node<T>;
+                None => {
+                    self.back = &mut *new as *mut Node<T>;
+                    self.front = Some(new);
                 },
                 Some(ref node) => {
-                    let mut new = Node::new(elt);
                     new.prev = self.back;
-                    (*self.back).next = Some(box new);
-                    self.back = &mut *((*self.back).next.unwrap()) as *mut Node<T>;
+                    self.back = &mut *new as *mut Node<T>;
+                    (*self.back).next = Some(new);
                 }
             }
         }
@@ -253,34 +271,28 @@ impl<T> RawPtr<T> for *mut T {
 
     */
 
-        /*
     fn pop_back(&mut self) -> Option<T> {
-        if self.back.to_option() == None {
-            return None;
-        }
+        match mut_raw_to_mut_ref(self.back) {
+            None => None, // Nothing to pop
+            Some(curr_tail) => {
+                self.back = curr_tail.prev;
+                self.length -= 1;
 
-        //(*(*self.back).prev).next
-
-        unsafe {
-            match self.back.to_option() {
-                None     => None,
-                Some(node) => {
-                    (*((*self.back).prev)).next = None;
-                    self.length -= 1;
-                    Some(node.value)
-                }
+                Some(
+                    match mut_raw_to_mut_ref(curr_tail.prev) {
+                        None => unwrap_link( self.front.take() ) ,
+                        Some(tail_prev) => unwrap_link( tail_prev.next.take() ),
+                    })
             }
         }
-        None // FIXME
     }
-    */
 
     fn pop_front(&mut self) -> Option<T> {
         // if I'm taking the value in self.front out and leaving None in its place, 
         // don't I need to replace it with self.front.take().next?
         match self.front.take() {
             None => None,  // nothing to pop.
-            Some(f) => {
+            Some(mut f) => {
                 self.length -= 1;
 
                 match f.next.take() {
@@ -297,5 +309,39 @@ impl<T> RawPtr<T> for *mut T {
                 Some(f.value)
             }
         }
+    }
+}
+
+
+// Not completely safe. We do check if the pointer is null (and return None 
+// accordingly), but if the pointer is non-null and still invalid there will be
+// a problem.
+fn mut_raw_to_mut_ref<T>(ptr: *mut T) -> Option<&mut T> {
+    if ptr.is_null() {
+        None
+    } else {
+        Some(unsafe { mem::transmute(ptr) })
+    }
+}
+
+
+// will fail if it's None
+fn unwrap_link<T>(node: Link<T>) -> T {
+    (*node.unwrap()).value
+}
+
+
+impl<A: fmt::Show> fmt::Show for DList<A> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "[");
+
+        let mut link = &self.front;
+        while !link.is_none() {
+            let node: &Node<A> = &**(link.get_ref());
+            write!(f, "{}", node.value);
+            link = &node.next;
+        }
+
+        write!(f, "]")
     }
 }

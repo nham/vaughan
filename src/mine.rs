@@ -87,5 +87,7 @@ fn main() {
         }
     }
 
+    println!("{}", lst);
+
     opv.sort();
 }
