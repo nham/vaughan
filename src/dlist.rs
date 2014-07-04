@@ -23,7 +23,7 @@ impl<T> Node<T> {
 }
 
 pub struct DList<T> {
-    length: uint,
+    pub length: uint,
     front: Link<T>,
     back: *mut Node<T>,
 }
@@ -106,16 +106,17 @@ impl<T> Deque<T> for DList<T> {
         let mut new = box Node::new(elt);
         if self.front.is_none() {
             self.back = &mut *new as *mut Node<T>;
-            self.front = Some(new);
         } else {
+            {
+                let front = self.front.get_mut_ref();
+                (*front).prev = &mut *new as *mut Node<T>;
+            }
+
             let old_front = self.front.take();
             new.next = old_front;
-            self.front = Some(new);
-
-            // I think we need to replace self.front with new, and then set
-            // new.next to the thing we replaced
         }
 
+        self.front = Some(new);
         self.length += 1;
     }
 

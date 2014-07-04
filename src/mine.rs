@@ -79,6 +79,8 @@ fn main() {
 
     for token in inp.iter() {
         lst.push_back(Tree::leaf(*token));
+        println!("pushed {}", token);
+        println!("now lst = {}, length = {}", lst, lst.length);
 
         if is_op(*token) {
             let llref = lst.back().unwrap() as *const Tree<&str>;
